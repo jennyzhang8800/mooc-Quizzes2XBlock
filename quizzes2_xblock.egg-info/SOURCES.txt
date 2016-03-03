@@ -1,0 +1,12 @@
+quizzes2/__init__.py
+quizzes2/quizzes2.py
+quizzes2/static/README.txt
+quizzes2/static/css/quizzes2.css
+quizzes2/static/html/quizzes2.html
+quizzes2/static/js/src/quizzes2.js
+quizzes2_xblock.egg-info/PKG-INFO
+quizzes2_xblock.egg-info/SOURCES.txt
+quizzes2_xblock.egg-info/dependency_links.txt
+quizzes2_xblock.egg-info/entry_points.txt
+quizzes2_xblock.egg-info/requires.txt
+quizzes2_xblock.egg-info/top_level.txt

@@ -1,0 +1,9 @@
+/* CSS for Quizzes2XBlock */
+
+.quizzes2_block .count {
+    font-weight: bold;
+}
+
+.quizzes2_block p {
+    cursor: pointer;
+}
