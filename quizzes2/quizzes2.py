@@ -39,6 +39,8 @@ class Quizzes2XBlock(XBlock):
     maxTry = Integer(default=0, scope=Scope.content)
     # 当前block保存的题目
     questionJson = Dict(default={}, scope=Scope.content)
+    # 当前block保存的题题号
+    qNo = Integer(default=0, scope=Scope.content)
     # 学生当前已经尝试的次数
     tried = Integer(default=0, scope=Scope.user_state)
     # 学生每次回答的记录
@@ -49,7 +51,6 @@ class Quizzes2XBlock(XBlock):
         data = pkg_resources.resource_string(__name__, path)
         return data.decode("utf8")
 
-    # TO-DO: change this view to display your data your own way.
     def student_view(self, context=None):
         """
         The primary view of the Quizzes2XBlock, shown to students
@@ -62,6 +63,13 @@ class Quizzes2XBlock(XBlock):
         frag.add_javascript(self.resource_string("static/js/src/quizzes2.js"))
         frag.initialize_js('Quizzes2XBlock')
         return frag
+
+    def studio_view(self, context):
+        html_str = pkg_resources.resource_string(__name__, "static/html/quizzes2_config.html")
+        frag = Fragment(unicode(html_str).format(qNo=self.qNo, maxTry=self.maxTry))
+        js_str = pkg_resources.resource_string(__name__, "static/js/quizzes2_config.js")
+        frag.add_javascript(unicode(js_str))
+        frag.initialize_js('Quizzes2ConfigBlock')
 
     def dAnswer(self, question):
         '''
@@ -146,10 +154,10 @@ class Quizzes2XBlock(XBlock):
         '''
         try:
             # 保存max_try
-            self.maxTry = int(data['max_try'])
+            self.maxTry = int(data['maxTry'])
 
             # 从github获取题号对应的题目json数据
-            q_number = int(data['q_number'])
+            q_number = int(data['qNo'])
             url = Config.getQuestionJsonUrl % {
                 'qDir': ((q_number - 1) / 100) + 1,
                 'qNo': q_number,
