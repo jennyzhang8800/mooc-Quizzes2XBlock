@@ -9,6 +9,12 @@ from conf import Config
 from util import Util
 import json
 import datetime
+import urllib2
+import base64
+
+
+class Test(object):
+    pass
 
 
 class Quizzes2XBlock(XBlock):
@@ -29,16 +35,14 @@ class Quizzes2XBlock(XBlock):
         default=0, scope=Scope.user_state,
         help="A simple counter, to show something happening",
     )
-    # 学生能够回答该问题的最大尝试次数
-    maxTry = Integer(default=99, scope=Scope.content)
-    # 学生当前已经尝试的次数
-    tried = Integer(default=0, scope=Scope.user_state)
-    # 学生的回答时候已经被批改
-    graded = Boolean(default=False, scope=Scope.user_state)
-    # 学生每次回答的记录
-    answerList = List(default=[], scope=Scope.user_state)
+    # 学生能够回答该问题的最大尝试次数,0表示无限制
+    maxTry = Integer(default=0, scope=Scope.content)
     # 当前block保存的题目
     questionJson = Dict(default={}, scope=Scope.content)
+    # 学生当前已经尝试的次数
+    tried = Integer(default=0, scope=Scope.user_state)
+    # 学生每次回答的记录
+    answerList = List(default=[{"time":"2012-01-01 13:20","answer":"A"},{"time":"2012-01-01 13:30","answer":"B"}], scope=Scope.user_state)
 
     def resource_string(self, path):
         """Handy helper for getting resources from our kit."""
@@ -52,37 +56,56 @@ class Quizzes2XBlock(XBlock):
         when viewing courses.
         """
         html = self.resource_string("static/html/quizzes2.html")
-        frag = Fragment(html.format(self=self))
+        frag = Fragment(html)
         frag.add_css(self.resource_string("static/css/quizzes2.css"))
+        frag.add_javascript(self.resource_string("static/js/handlebars-v4.0.5.js"))
         frag.add_javascript(self.resource_string("static/js/src/quizzes2.js"))
         frag.initialize_js('Quizzes2XBlock')
         return frag
 
+    def dAnswer(self, question):
+        '''
+        用于删除题目中答案等相关信息
+        '''
+        question['answer'] = u'已隐藏'
+        question['explain'] = u'已隐藏'
+        return question
+
+    def genCurrentStatus(self):
+        # if not hasattr(self.runtime, "anonymous_student_id"):
+        #     raise Exception('Cannot get anonymous_student_id in runtime')
+        # student = self.runtime.get_real_user(self.runtime.anonymous_student_id)
+        student = Test()
+        student.email = 'test@test.com'
+        student.username = 'student'
+        if type(self.questionJson) is str:
+            self.questionJson = json.loads(self.questionJson)
+
+        self.logger.info('CurrentStatus [student=(%s, %s)] [tried=%d] [maxTry=%d] [graded=%s] [qNo=%d]' % (
+            student.email,
+            student.username,
+            self.tried,
+            self.maxTry,
+            False,
+            self.questionJson['q_number']
+        ))
+        return {
+            'maxTry': self.maxTry,
+            'tried': self.tried,
+            'graded': True,    # TODO: 添加评分系统
+            'gradeInfo': {'time': '2012-01-01', 'givenAnswer': 'A', 'rightAnswer': 'A', 'score': 1},
+            'student': {'email': student.email, 'username': student.username},
+            'answer': self.answerList,
+            'question': self.dAnswer(self.questionJson)
+        }
+
     @XBlock.json_handler
-    def getQuestionAndStudentStatus(self, data, suffix=''):
+    def getCurrentStatus(self, data, suffix=''):
         try:
-            if not hasattr(self.runtime, "anonymous_student_id"):
-                raise Exception('Cannot get anonymous_student_id in runtime', self.runtime)
-            student = self.runtime.get_real_user(self.runtime.anonymous_student_id)
-            self.logger.info('getQuestionAndStudentStatus [student=(%s, %s)] [tried=%d] [maxTry=%d] [graded=%s] [qNo=%d]' % (
-                student.email,
-                student.username,
-                self.tried,
-                self.maxTry,
-                self.graded,
-                self.questionJson['q_number']
-            ))
-            return {
-                'maxTry': self.maxTry,
-                'tried': self.tried,
-                'graded': False,    # TODO: 添加评分系统
-                'gradeInfo': {},
-                'student': student,
-                'question': self.questionJson
-            }
+            return self.genCurrentStatus()
         except Exception as e:
-            self.logger.exception('ERROR getQuestionAndStudentStatus %s' % str(e.args))
-            return {'code': 1, 'dese': str(e.args)}
+            self.logger.exception('ERROR getCurrentStatus %s %s' % (str(e), str(e.args)))
+            return {'code': 1, 'dese': str(e)}
 
     @XBlock.json_handler
     def studentSubmit(self, data, suffix=''):
@@ -101,25 +124,49 @@ class Quizzes2XBlock(XBlock):
 
             t = datetime.datetime.now() + datetime.timedelta(hours=12)
             createtime = t.strftime('%Y-%m-%d:%H:%M:%S')
-            content['answer'].append({'time': createtime, 'answer': data['answer']})
-            self.logger.info('studentSubmit [content=%s]' % json.dumps(content))
+            answerItem = {'time': createtime, 'answer': data['answer']}
 
+            content['answer'].append(answerItem)
+            self.answerList.append(answerItem)
+            self.tried += 1
+
+            self.logger.info('studentSubmit [content=%s]' % json.dumps(content))
+            # TODO push to gitlab
+            return {'code': 0, 'desc': 'ok', 'result': self.genCurrentStatus()}
         except Exception as e:
             self.logger.exception('ERROR student_submit %s' % str(e.args))
             return {'code': 1, 'dese': str(e.args)}
 
     @XBlock.json_handler
-    def increment_count(self, data, suffix=''):
-        """
-        An example handler, which increments the data.
-        """
-        # Just to show data coming in...
-        assert data['hello'] == 'world'
+    def studioSubmit(self, data, suffix=''):
+        '''
+        用于配置XBlock的题目，以及每个学生的回答次数
+        data.q_number   题号
+        data.max_try    最大尝试的次数
+        '''
+        try:
+            # 保存max_try
+            self.maxTry = int(data['max_try'])
 
-        self.count += 1
-        return {"count": self.count}
+            # 从github获取题号对应的题目json数据
+            q_number = int(data['q_number'])
+            url = Config.getQuestionJsonUrl % {
+                'qDir': ((q_number - 1) / 100) + 1,
+                'qNo': q_number,
+            }
+            res_data = urllib2.urlopen(url)
+            res = res_data.read()
+            res = json.loads(res)
+            if 'content' in res:
+                self.questionJson = json.loads(base64.b64decode(res['content']))
+                pass
+            else:
+                self.logger.info('ERROR studioSubmit: Cannot read question json [qNo=%d] [msg=%s]' % (q_number, res['message']))
+                return {'code': 2, 'desc': res['message']}
+        except Exception as e:
+            self.logger.exception('ERROR studioSubmit %s' % str(e.args))
+            return {'code': 1, 'dese': str(e.args)}
 
-    # TO-DO: change this to create the scenarios you'd like to see in the
     # workbench while developing your XBlock.
     @staticmethod
     def workbench_scenarios():
@@ -128,11 +175,15 @@ class Quizzes2XBlock(XBlock):
             ("Quizzes2XBlock",
              """<quizzes2/>
              """),
+            ("Quizzes2XBlock-test",
+                """
+                <quizzes2 maxTry="2" questionJson='{"status":"ok","knowledge":["操作系统概述"],"degree_of_difficulty":1,"explain":"B\n","question":"批处理系统的主要缺点是 。\n","source":"网络","answer":"B","type":"single_answer","options":["A.CPU的利用率不高","B.失去了交互性","C.不具备并行性","D.以上都不是"],"q_number":1002}'/>
+             """),
             ("Multiple Quizzes2XBlock",
              """<vertical_demo>
-                <quizzes2/>
-                <quizzes2/>
-                <quizzes2/>
+                <quizzes2 maxTry="2" questionJson='{"status":"ok","knowledge":["操作系统概述"],"degree_of_difficulty":1,"explain":"B\n","question":"批处理系统的主要缺点是 。\n","source":"网络","answer":"B","type":"single_answer","options":["A.CPU的利用率不高","B.失去了交互性","C.不具备并行性","D.以上都不是"],"q_number":1002}'/>
+                <quizzes2 maxTry="5" questionJson='{"status":"error","knowledge":["文件系统"],"degree_of_difficulty":1,"explain":"解释\n","question":"文件的逻辑结构的基本形式有______________________________________ 。\n","source":"网络","answer":"解释\n","type":"fill_in_the_blank","q_number":396}'/>
+                <quizzes2 maxTry="0" questionJson='{"status":"ok","knowledge":["调查问卷"],"degree_of_difficulty":1,"explain":"解释\n","question":"为什么要学这门课？\n","source":"网络","answer":"A","type":"multi_answer","options":["A.对内容有兴趣","B.内容与自己的目标相一致，结果有用","C.由于学分要求，必须选","D.其他，请注明原因"],"q_number":1137}' answerList='[{"time":"2012-01-01 13:20","answer":"A"}]'/>
                 </vertical_demo>
              """),
         ]

@@ -1,5 +1,28 @@
 <div class="quizzes2_block">
-<p>Quizzes2XBlock: count is now
-    <span class='count'>{self.count}</span> (click me to increment).
-</p>
 </div>
+
+<script id="quizzes2-template" type="text/x-handlebars-template">
+{{#with question}}
+    <div class="hr"></div>
+    <p class="questionText">{{question}}<span>(来源:{{source}},知识点:{{knowledge}},难度:{{degree_of_difficulty}})</span></p>
+    {{#if options}}
+        {{#each options}}
+        <label class="option">
+            {{CheckLabel ../type ../q_number this}}
+        </label>
+        {{/each}}
+    {{else}}
+        <input type="text" class="text-input"/>
+    {{/if}}
+{{/with}}
+{{#if answer}}
+    <p class="answer">你的答案: {{Lastest answer}} <span class="grade-info">{{GradeInfo graded gradeInfo}}</span><p>
+    <div class="action">
+        {{SubmitAction tried maxTry true}}
+    </div>
+{{else}}
+    <div class="action">
+        {{SubmitAction tried maxTry false}}
+    </div>
+{{/if}}
+</script>
