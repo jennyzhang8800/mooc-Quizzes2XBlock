@@ -67,39 +67,44 @@ class Quizzes2XBlock(XBlock):
     def studio_view(self, context=None):
         html = self.resource_string("static/html/quizzes2_config.html")
         frag = Fragment(unicode(html).format(qNo=self.qNo, maxTry=self.maxTry))
+        frag.add_javascript(self.resource_string("static/js/handlebars-v4.0.5.js"))
         frag.add_javascript(self.resource_string('static/js/src/quizzes2_config.js'))
         frag.initialize_js('Quizzes2XBlock')
         return frag
 
-    def dAnswer(self, question):
-        '''
-        用于删除题目中答案等相关信息
-        '''
-        question['answer'] = u'已隐藏'
-        question['explain'] = u'已隐藏'
-        return question
-
     def genCurrentStatus(self):
-        if not hasattr(self.runtime, "anonymous_student_id"):
-            raise Exception('Cannot get anonymous_student_id in runtime')
-        student = self.runtime.get_real_user(self.runtime.anonymous_student_id)
-        if type(self.questionJson) is str:
-            self.questionJson = json.loads(self.questionJson)
+        # 检查是否是runtime环境
+        if self.runtime is None:
+            if type(self.questionJson) is str:
+                self.questionJson = json.loads(self.questionJson)
+            # 测试环境下，以下变量暂时无法获得
+            studentEmail = 'email unknown'
+            studentUsername = 'username unknown'
+            tried = 0
+            maxTry = 3
+        else:
+            if not hasattr(self.runtime, "anonymous_student_id"):
+                raise Exception('Cannot get anonymous_student_id in runtime')
+            student = self.runtime.get_real_user(self.runtime.anonymous_student_id)
+            studentEmail = student.email
+            studentUsername = student.username
+            tried = self.tried
+            maxTry = self.maxTry
 
         self.logger.info('CurrentStatus [student=(%s, %s)] [tried=%d] [maxTry=%d] [graded=%s] [qNo=%d]' % (
-            student.email,
-            student.username,
-            self.tried,
-            self.maxTry,
+            studentEmail,
+            studentUsername,
+            tried,
+            maxTry,
             False,
             self.questionJson['q_number']
         ))
         return {
-            'maxTry': self.maxTry,
-            'tried': self.tried,
+            'maxTry': maxTry,
+            'tried': tried,
             'graded': False,    # TODO: 添加评分系统
             'gradeInfo': {},
-            'student': {'email': student.email, 'username': student.username},
+            'student': {'email': studentEmail, 'username': studentUsername},
             'answer': self.answerList,
             'question': self.questionJson
         }
@@ -171,6 +176,10 @@ class Quizzes2XBlock(XBlock):
             if 'content' in res:
                 content = base64.b64decode(res['content'])
                 self.questionJson = json.loads(content)
+                # 抹去题目中的答案和解释信息
+                self.questionJson['answer'] = u'已隐藏'
+                self.questionJson['explain'] = u'已隐藏'
+
                 self.logger.info('get question from remote [qNo=%s] [content="%s"]' % (q_number, content))
                 return {'code': 0, 'desc': 'ok'}
             else:

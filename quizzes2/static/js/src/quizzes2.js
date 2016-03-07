@@ -21,7 +21,10 @@ function Quizzes2XBlock(runtime, element) {
 
     $(element).on('click', '.btn-submit', function(event) {
         answer = getStudentAnswer();
-        console.info(answer);
+        if ($.trim(answer) == '') {
+            alert('答案不能为空');
+            return;
+        }
         switchStyle($(event.target), 'submiting');
         $.ajax({
             type: 'POST',
@@ -29,8 +32,10 @@ function Quizzes2XBlock(runtime, element) {
             data: JSON.stringify({'answer': answer}),
             dataType: 'json',
             success: function(data) {
-                console.info(data);
                 switchStyle($(event.target), 'submited');
+                if (data.code != 0) {
+                    alert('您的提交可能失败了' + JSON.stringify(data));
+                }
             }
         });
     });
