@@ -44,7 +44,7 @@ class Quizzes2XBlock(XBlock):
     # 学生当前已经尝试的次数
     tried = Integer(default=0, scope=Scope.user_state)
     # 学生每次回答的记录
-    answerList = List(default=[{"time":"2012-01-01 13:20","answer":"A"},{"time":"2012-01-01 13:30","answer":"B"}], scope=Scope.user_state)
+    answerList = List(default=[], scope=Scope.user_state)
 
     def resource_string(self, path):
         """Handy helper for getting resources from our kit."""
@@ -64,12 +64,12 @@ class Quizzes2XBlock(XBlock):
         frag.initialize_js('Quizzes2XBlock')
         return frag
 
-    def studio_view(self, context):
-        html_str = pkg_resources.resource_string(__name__, "static/html/quizzes2_config.html")
-        frag = Fragment(unicode(html_str).format(qNo=self.qNo, maxTry=self.maxTry))
-        js_str = pkg_resources.resource_string(__name__, "static/js/quizzes2_config.js")
-        frag.add_javascript(unicode(js_str))
-        frag.initialize_js('Quizzes2ConfigBlock')
+    def studio_view(self, context=None):
+        html = self.resource_string("static/html/quizzes2_config.html")
+        frag = Fragment(unicode(html).format(qNo=self.qNo, maxTry=self.maxTry))
+        frag.add_javascript(self.resource_string('static/js/src/quizzes2_config.js'))
+        frag.initialize_js('Quizzes2XBlock')
+        return frag
 
     def dAnswer(self, question):
         '''
@@ -80,12 +80,9 @@ class Quizzes2XBlock(XBlock):
         return question
 
     def genCurrentStatus(self):
-        # if not hasattr(self.runtime, "anonymous_student_id"):
-        #     raise Exception('Cannot get anonymous_student_id in runtime')
-        # student = self.runtime.get_real_user(self.runtime.anonymous_student_id)
-        student = Test()
-        student.email = 'test@test.com'
-        student.username = 'student'
+        if not hasattr(self.runtime, "anonymous_student_id"):
+            raise Exception('Cannot get anonymous_student_id in runtime')
+        student = self.runtime.get_real_user(self.runtime.anonymous_student_id)
         if type(self.questionJson) is str:
             self.questionJson = json.loads(self.questionJson)
 
@@ -100,25 +97,37 @@ class Quizzes2XBlock(XBlock):
         return {
             'maxTry': self.maxTry,
             'tried': self.tried,
-            'graded': True,    # TODO: 添加评分系统
-            'gradeInfo': {'time': '2012-01-01', 'givenAnswer': 'A', 'rightAnswer': 'A', 'score': 1},
+            'graded': False,    # TODO: 添加评分系统
+            'gradeInfo': {},
             'student': {'email': student.email, 'username': student.username},
             'answer': self.answerList,
-            'question': self.dAnswer(self.questionJson)
+            'question': self.questionJson
         }
 
     @XBlock.json_handler
     def getCurrentStatus(self, data, suffix=''):
         try:
-            return self.genCurrentStatus()
+            status = self.genCurrentStatus()
+            return {'code': 0, 'desc': 'ok', 'result': status}
         except Exception as e:
-            self.logger.exception('ERROR getCurrentStatus %s %s' % (str(e), str(e.args)))
+            self.logger.exception('ERROR getCurrentStatus %s' % (str(e)))
             return {'code': 1, 'dese': str(e)}
 
     @XBlock.json_handler
     def studentSubmit(self, data, suffix=''):
         try:
             student = self.runtime.get_real_user(self.runtime.anonymous_student_id)
+
+            t = datetime.datetime.now() + datetime.timedelta(hours=12)
+            createtime = t.strftime('%Y-%m-%d:%H:%M:%S')
+            answerItem = {'time': createtime, 'answer': data['answer']}
+            self.answerList.append(answerItem)
+            # 删除多余的历史数据
+            if len(self.answerList) > Config.maxSizeOfAnswerList:
+                self.answerList = self.answerList[-(Config.maxSizeOfAnswerList):]
+
+            self.tried += 1
+
             # TODO 从gitlab读取content
             content = {
                 'maxTry': self.maxTry,
@@ -130,15 +139,7 @@ class Quizzes2XBlock(XBlock):
                 'answer': self.answerList
             }
 
-            t = datetime.datetime.now() + datetime.timedelta(hours=12)
-            createtime = t.strftime('%Y-%m-%d:%H:%M:%S')
-            answerItem = {'time': createtime, 'answer': data['answer']}
-
-            content['answer'].append(answerItem)
-            self.answerList.append(answerItem)
-            self.tried += 1
-
-            self.logger.info('studentSubmit [content=%s]' % json.dumps(content))
+            self.logger.info('studentSubmit [content=%s]' % json.dumps(answerItem))
             # TODO push to gitlab
             return {'code': 0, 'desc': 'ok', 'result': self.genCurrentStatus()}
         except Exception as e:
@@ -153,11 +154,13 @@ class Quizzes2XBlock(XBlock):
         data.max_try    最大尝试的次数
         '''
         try:
+            self.logger.info('studioSubmit data=%s' % str(data))
             # 保存max_try
             self.maxTry = int(data['maxTry'])
 
             # 从github获取题号对应的题目json数据
             q_number = int(data['qNo'])
+            self.qNo = q_number
             url = Config.getQuestionJsonUrl % {
                 'qDir': ((q_number - 1) / 100) + 1,
                 'qNo': q_number,
@@ -166,10 +169,12 @@ class Quizzes2XBlock(XBlock):
             res = res_data.read()
             res = json.loads(res)
             if 'content' in res:
-                self.questionJson = json.loads(base64.b64decode(res['content']))
-                pass
+                content = base64.b64decode(res['content'])
+                self.questionJson = json.loads(content)
+                self.logger.info('get question from remote [qNo=%s] [content="%s"]' % (q_number, content))
+                return {'code': 0, 'desc': 'ok'}
             else:
-                self.logger.info('ERROR studioSubmit: Cannot read question json [qNo=%d] [msg=%s]' % (q_number, res['message']))
+                self.logger.warning('ERROR studioSubmit: Cannot read question json [qNo=%d] [msg=%s]' % (q_number, res['message']))
                 return {'code': 2, 'desc': res['message']}
         except Exception as e:
             self.logger.exception('ERROR studioSubmit %s' % str(e.args))

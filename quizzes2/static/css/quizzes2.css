@@ -1,26 +1,26 @@
 /* CSS for Quizzes2XBlock */
 
-.quizzes2_block {
+div.quizzes2_block .quizzes2_block {
     padding: 16px;
     margin-top: 100px;
 }
 
-.questionText {
+div.quizzes2_block .questionText {
     font-size: 1.2rem;
 }
 
-.questionText span {
+div.quizzes2_block .questionText span {
     font-size: 0.8rem;
 }
 
-.hr {
+div.quizzes2_block .hr {
     content: ' ';
     width: 100%;
     height: 3px;
     background-color: #337AB7;
 }
 
-label.option {
+div.quizzes2_block label.option {
     font-size: 0.9rem;
     box-sizing: border-box;
     display: inline-block;
@@ -32,11 +32,11 @@ label.option {
     width: 100%;
 }
 
-label:hover {
+div.quizzes2_block label.option:hover {
     border: 2px solid #009fe6;
 }
 
-.text-input {
+div.quizzes2_block .text-input {
     border: 2px solid #e5e5e5;
     border-radius: 3px;
     width: 100%;
@@ -48,11 +48,11 @@ label:hover {
     box-sizing: border-box;
 }
 
-.check-input {
+div.quizzes2_block .check-input {
     margin-right: 4px;
 }
 
-.btn {
+div.quizzes2_block .btn {
     padding: 6px 12px;
     display: inline-block;
     box-sizing: border-box;
@@ -63,20 +63,22 @@ label:hover {
     border-radius: 4px;
     line-height: 1.5rem;
     font-size: 0.9rem;
+    background-image: none;
+    box-shadow: none;
 }
 
-.check-info {
+div.quizzes2_block .check-info {
     margin-left: 10px;
     display: inline-block;
     color: #aaa;
     font-size: 0.9rem;
 }
 
-.check-info span {
+div.quizzes2_block .check-info span {
     color: #0448F5;
 }
 
-.answer {
+div.quizzes2_block .answer {
     padding: 16px;
     overflow: auto;
     font-size: .75rem;
@@ -85,30 +87,30 @@ label:hover {
     border-radius: 3px;
 }
 
-.btn-submit {
+div.quizzes2_block .btn-submit {
     color: #fff;
     background-color: #337ab7;
     border-color: #2e6da4;
 }
 
-.btn-submit:hover {
+div.quizzes2_block .btn-submit:hover {
     color: #fff;
     background-color: #286090;
     border-color: #204d74;
 }
 
-.btn-submiting {
+div.quizzes2_block .btn-submiting {
     color: #fff;
     background-color: #799CBB;
     border-color: #799CBB;
 }
 
-.btn-submited {
+div.quizzes2_block .btn-submited {
     color: #fff;
     background-color: #799CBB;
     border-color: #799CBB;
 }
 
-.grade-info {
+div.quizzes2_block .grade-info {
     float: right
 }

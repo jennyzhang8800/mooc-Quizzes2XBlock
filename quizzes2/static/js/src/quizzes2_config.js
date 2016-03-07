@@ -1,4 +1,4 @@
-function Quizzes2ConfigBlock(runtime, element) {
+function Quizzes2XBlock(runtime, element) {
     $(element).find('.save-button').bind('click', function() {
         var handlerUrl = runtime.handlerUrl(element, 'studioSubmit');
         var data = {

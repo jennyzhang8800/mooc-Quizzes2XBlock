@@ -11,10 +11,10 @@ function Quizzes2XBlock(runtime, element) {
     $.ajax({
         type: 'POST',
         url: runtime.handlerUrl(element, 'getCurrentStatus'),
-        data: JSON.stringify({}),
+        data: JSON.stringify({'data':'getCurrentStatus'}),
         dataType: 'json',
         success: function(data) {
-            curStatus = data;
+            curStatus = data.result;
             onDataLoad();
         }
     });
@@ -112,7 +112,7 @@ Handlebars.registerHelper('SubmitAction', function(tried, maxTry, answerd) {
             submitBtn = '<button class="btn btn-submit">再次提交</button>';
         }
     } else {
-        submitBin = '<button class="btn btn-submit">提交</button>';
+        submitBtn = '<button class="btn btn-submit">提交</button>';
     }
 
     return new Handlebars.SafeString(
@@ -126,4 +126,15 @@ Handlebars.registerHelper('GradeInfo', function(graded, gradeInfo) {
     } else {
         return '参考答案:' + gradeInfo.rightAnswer + ', 得分:' + gradeInfo.score;
     }
+});
+
+Handlebars.registerHelper('TypeText', function(type) {
+    TYPE_STR = {
+        'single_answer': '单选题',
+        'multi_answer': '多选题',
+        'true_false': '判断题',
+        'question_answer': '问答题',
+        'fill_in_the_blank': '填空题'
+    };
+    return TYPE_STR[type];
 });
