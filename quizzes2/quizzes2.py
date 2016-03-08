@@ -73,8 +73,11 @@ class Quizzes2XBlock(XBlock):
         return frag
 
     def genCurrentStatus(self):
-        # 检查是否是runtime环境
-        if self.runtime is None:
+        if not hasattr(self.runtime, "anonymous_student_id"):
+            raise Exception('Cannot get anonymous_student_id in runtime')
+
+        # 检查是否是生产环境
+        if self.runtime.get_real_user is None:
             if type(self.questionJson) is str:
                 self.questionJson = json.loads(self.questionJson)
             # 测试环境下，以下变量暂时无法获得
@@ -83,22 +86,12 @@ class Quizzes2XBlock(XBlock):
             tried = 0
             maxTry = 3
         else:
-            if not hasattr(self.runtime, "anonymous_student_id"):
-                raise Exception('Cannot get anonymous_student_id in runtime')
             student = self.runtime.get_real_user(self.runtime.anonymous_student_id)
             studentEmail = student.email
             studentUsername = student.username
             tried = self.tried
             maxTry = self.maxTry
 
-        self.logger.info('CurrentStatus [student=(%s, %s)] [tried=%d] [maxTry=%d] [graded=%s] [qNo=%d]' % (
-            studentEmail,
-            studentUsername,
-            tried,
-            maxTry,
-            False,
-            self.questionJson['q_number']
-        ))
         return {
             'maxTry': maxTry,
             'tried': tried,
@@ -144,7 +137,13 @@ class Quizzes2XBlock(XBlock):
                 'answer': self.answerList
             }
 
-            self.logger.info('studentSubmit [content=%s]' % json.dumps(answerItem))
+            self.logger.info('studentSubmit [student=%] [tried=%d] [maxTry=%d] [answer=%s] [qNo=%d]' % (
+                (student.email, student.username),
+                self.tried,
+                self.maxTry,
+                json.dumps(answerItem),
+                self.qNo
+            ))
             # TODO push to gitlab
             return {'code': 0, 'desc': 'ok', 'result': self.genCurrentStatus()}
         except Exception as e:
@@ -180,7 +179,7 @@ class Quizzes2XBlock(XBlock):
                 self.questionJson['answer'] = u'已隐藏'
                 self.questionJson['explain'] = u'已隐藏'
 
-                self.logger.info('get question from remote [qNo=%s] [content="%s"]' % (q_number, content))
+                self.logger.info('get question from remote [qNo=%s]' % (q_number))
                 return {'code': 0, 'desc': 'ok'}
             else:
                 self.logger.warning('ERROR studioSubmit: Cannot read question json [qNo=%d] [msg=%s]' % (q_number, res['message']))
