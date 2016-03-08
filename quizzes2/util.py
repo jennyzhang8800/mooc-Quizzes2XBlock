@@ -7,6 +7,9 @@ import logging
 class Util:
     @staticmethod
     def logger(config):
+        '''
+        获取logger
+        '''
         fh = logging.FileHandler(config['logFile'], encoding="utf-8")
         fmt = logging.Formatter(config['logFmt'])
         fh.setFormatter(fmt)

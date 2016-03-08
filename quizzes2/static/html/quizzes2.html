@@ -18,11 +18,11 @@
 {{#if answer}}
     <p class="answer">你的答案: {{Lastest answer}} <span class="grade-info">{{GradeInfo graded gradeInfo}}</span><p>
     <div class="action">
-        {{SubmitAction tried maxTry true}}
+        {{SubmitAction tried maxTry true graded}}
     </div>
 {{else}}
     <div class="action">
-        {{SubmitAction tried maxTry false}}
+        {{SubmitAction tried maxTry false false}}
     </div>
 {{/if}}
 </script>

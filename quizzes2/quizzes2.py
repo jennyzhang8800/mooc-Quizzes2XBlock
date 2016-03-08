@@ -6,8 +6,10 @@ from xblock.core import XBlock
 from xblock.fields import Scope, Integer, Dict, List, Boolean
 from xblock.fragment import Fragment
 from conf import Config
-from util import Util
+from GitRepo import GitRepo
 import json
+import hashlib
+import logging
 import datetime
 import urllib2
 import base64
@@ -22,19 +24,9 @@ class Quizzes2XBlock(XBlock):
     这是学生回答习题的，需要保存每个学生的回答状态
     """
 
-    # Fields are defined on the class.  You can access them in your code as
-    # self.<fieldname>.
-    logger = Util.logger({
-        'logFile': Config.logFile,
-        'logFmt': Config.logFmt,
-        'logName': 'Quizzes2XBlock'
-    })
+    logging.basicConfig(filename=Config.logFile, level=Config.logLevel, format=Config.logFmt)
+    gitlabRepo = GitRepo(Config)
 
-    # TO-DO: delete count, and define your own fields.
-    count = Integer(
-        default=0, scope=Scope.user_state,
-        help="A simple counter, to show something happening",
-    )
     # 学生能够回答该问题的最大尝试次数,0表示无限制
     maxTry = Integer(default=0, scope=Scope.content)
     # 当前block保存的题目
@@ -85,22 +77,41 @@ class Quizzes2XBlock(XBlock):
             studentUsername = 'username unknown'
             tried = 0
             maxTry = 3
+            graded = False
+            gradeInfo = None
         else:
             student = self.runtime.get_real_user(self.runtime.anonymous_student_id)
             studentEmail = student.email
             studentUsername = student.username
             tried = self.tried
             maxTry = self.maxTry
+            graded, gradeInfo = self.fetchGradeInfo(student, self.qNo)
 
         return {
             'maxTry': maxTry,
             'tried': tried,
-            'graded': False,    # TODO: 添加评分系统
-            'gradeInfo': {},
+            'graded': graded,
+            'gradeInfo': gradeInfo,
             'student': {'email': studentEmail, 'username': studentUsername},
             'answer': self.answerList,
             'question': self.questionJson
         }
+
+    def fetchGradeInfo(self, student, qNo):
+        '''
+        获取学生该题的批改信息
+        '''
+        filepath = '%(emailHash)s/%(username)s/%(qNo)d/%(qNo)d.graded.json' % {
+            'emailHash': hashlib.new('md5', student.email).hexdigest()[-2:],
+            'username': student.username,
+            'qNo': qNo
+        }
+        gradeInfo = self.gitlabRepo.readContent(filepath)
+        if gradeInfo is None:
+            graded = False
+        else:
+            graded = True
+        return (graded, gradeInfo)
 
     @XBlock.json_handler
     def getCurrentStatus(self, data, suffix=''):
@@ -108,7 +119,7 @@ class Quizzes2XBlock(XBlock):
             status = self.genCurrentStatus()
             return {'code': 0, 'desc': 'ok', 'result': status}
         except Exception as e:
-            self.logger.exception('ERROR getCurrentStatus %s' % (str(e)))
+            logging.exception('ERROR getCurrentStatus %s' % (str(e)))
             return {'code': 1, 'dese': str(e)}
 
     @XBlock.json_handler
@@ -124,30 +135,31 @@ class Quizzes2XBlock(XBlock):
             if len(self.answerList) > Config.maxSizeOfAnswerList:
                 self.answerList = self.answerList[-(Config.maxSizeOfAnswerList):]
 
-            self.tried += 1
-
-            # TODO 从gitlab读取content
-            content = {
-                'maxTry': self.maxTry,
-                'tried': self.tried,
-                'graded': False,
-                'gradeInfo': {},
-                'student': student,
-                'question': self.questionJson,
-                'answer': self.answerList
+            content = self.genCurrentStatus()
+            # TODO push to gitlab
+            filepath = '%(emailHash)s/%(username)s/%(qNo)d/%(qNo)d.json' % {
+                'emailHash': hashlib.new('md5', student.email).hexdigest()[-2:],
+                'username': student.username,
+                'qNo': self.qNo
             }
+            oldContent = self.gitlabRepo.readContent(filepath)
+            if oldContent is None:
+                self.gitlabRepo.createContent(content, filepath)
+            else:
+                self.gitlabRepo.updateContent(content, filepath)
 
-            self.logger.info('studentSubmit [student=%] [tried=%d] [maxTry=%d] [answer=%s] [qNo=%d]' % (
+            # 只有在前面的工作都完成以后,才能增加记录的次数
+            self.tried += 1
+            logging.info('studentSubmit [student=%] [tried=%d] [maxTry=%d] [answer=%s] [qNo=%d]' % (
                 (student.email, student.username),
                 self.tried,
                 self.maxTry,
                 json.dumps(answerItem),
                 self.qNo
             ))
-            # TODO push to gitlab
             return {'code': 0, 'desc': 'ok', 'result': self.genCurrentStatus()}
         except Exception as e:
-            self.logger.exception('ERROR student_submit %s' % str(e.args))
+            logging.exception('ERROR student_submit %s' % str(e))
             return {'code': 1, 'dese': str(e.args)}
 
     @XBlock.json_handler
@@ -158,7 +170,7 @@ class Quizzes2XBlock(XBlock):
         data.max_try    最大尝试的次数
         '''
         try:
-            self.logger.info('studioSubmit data=%s' % str(data))
+            logging.info('studioSubmit data=%s' % str(data))
             # 保存max_try
             self.maxTry = int(data['maxTry'])
 
@@ -179,13 +191,13 @@ class Quizzes2XBlock(XBlock):
                 self.questionJson['answer'] = u'已隐藏'
                 self.questionJson['explain'] = u'已隐藏'
 
-                self.logger.info('get question from remote [qNo=%s]' % (q_number))
+                logging.info('get question from remote [qNo=%s]' % (q_number))
                 return {'code': 0, 'desc': 'ok'}
             else:
-                self.logger.warning('ERROR studioSubmit: Cannot read question json [qNo=%d] [msg=%s]' % (q_number, res['message']))
+                logging.warning('ERROR studioSubmit: Cannot read question json [qNo=%d] [msg=%s]' % (q_number, res['message']))
                 return {'code': 2, 'desc': res['message']}
         except Exception as e:
-            self.logger.exception('ERROR studioSubmit %s' % str(e.args))
+            logging.exception('ERROR studioSubmit %s' % str(e.args))
             return {'code': 1, 'dese': str(e.args)}
 
     # workbench while developing your XBlock.

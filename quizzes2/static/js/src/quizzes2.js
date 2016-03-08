@@ -98,10 +98,12 @@ Handlebars.registerHelper('Lastest', function(answer) {
     return answer[answer.length - 1]['answer'];
 });
 
-Handlebars.registerHelper('SubmitAction', function(tried, maxTry, answerd) {
+Handlebars.registerHelper('SubmitAction', function(tried, maxTry, answerd, graded) {
     var remain = maxTry - tried;
     var tryStr = '';
-    if (maxTry == 0) {
+    if (graded) {
+        tryStr = '已经批改,无法提交';
+    } else if (maxTry == 0) {
         tryStr = '<span>该题不限提交次数</span>';
     } else if (remain > 0) {
         tryStr = '还可以再提交<span>' + remain + '</span>次';
@@ -111,7 +113,7 @@ Handlebars.registerHelper('SubmitAction', function(tried, maxTry, answerd) {
 
     var submitBtn = '';
     if (answerd) {
-        if (remain == 0 && maxTry != 0) {
+        if ((remain == 0 && maxTry != 0) || (graded)) {
             submitBtn = '<button class="btn btn-submited" disabled>已提交</button>';
         } else {
             submitBtn = '<button class="btn btn-submit">再次提交</button>';
