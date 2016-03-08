@@ -42,10 +42,10 @@ function Quizzes2XBlock(runtime, element) {
 
     function getStudentAnswer() {
         if (curStatus.question.options == undefined) {
-            return $('input.text-input', element).val();
+            return $('.text-input', element).val();
         } else {
             var answer = '';
-            $('input.check-input:checked', element).each(function() {
+            $('.check-input:checked', element).each(function() {
                 answer += $(this).val();
             });
             return answer;

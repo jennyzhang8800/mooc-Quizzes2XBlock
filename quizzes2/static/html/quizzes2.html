@@ -4,7 +4,7 @@
 <script id="quizzes2-template" type="text/x-handlebars-template">
 {{#with question}}
     <div class="hr"></div>
-    <p class="questionText">[{{TypeText type}}] {{question}}<span>(来源:{{source}},知识点:{{knowledge}},难度:{{degree_of_difficulty}})</span></p>
+    <p class="questionText">[{{TypeText type}}] {{question}}</p>
     {{#if options}}
         {{#each options}}
         <label class="option">
@@ -12,7 +12,7 @@
         </label>
         {{/each}}
     {{else}}
-        <input type="text" class="text-input"/>
+        <textarea class="text-input"></textarea>
     {{/if}}
 {{/with}}
 {{#if answer}}
