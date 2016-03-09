@@ -19,9 +19,9 @@ class Config:
     # teacher/answer gitlab 配置
     techerGitlab = {
         'root_token': 'xxxxxxxxxxxxxxxxxxxx',
-        'hostname': 'xxxxxxxxxxxxx',
+        'hostname': '172.16.13.236',
         'port': 80,
         'repo_id': 287,
         'file_operation_url': '/api/v3/projects/%(repo_id)d/repository/files?private_token=%(root_token)s&&file_path=%(filepath)s&&ref=%(ref)s',
-        'ref': 'master',
+        'ref': 'dev',
     }

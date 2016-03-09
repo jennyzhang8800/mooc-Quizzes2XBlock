@@ -45,7 +45,7 @@ class GitRepo:
             conn.close()
         return content
 
-    def createContent(self, content, filepath):
+    def createContent(self, content, filepath, commit):
         '''
         在gitlab指定路径上新建文件，返回服务器返回的信息
         '''
@@ -56,7 +56,12 @@ class GitRepo:
             'filepath': filepath
         }
         conn = httplib.HTTPConnection(self.hostname, self.port, timeout=10)
-        conn.request("POST", url, urllib.urlencode(content))
+        conn.request("POST", url, urllib.urlencode({
+            'file_path': filepath,
+            'content': content,
+            'branch_name': self.ref,
+            'commit_message': commit
+        }))
         response = conn.getresponse()
         result = json.loads(response.read())
         if response.status == 200 or response.status == 201:
@@ -66,7 +71,7 @@ class GitRepo:
             raise Exception('wrong status [status=%d]' % response.status)
         return result
 
-    def updateContent(self, content, filepath):
+    def updateContent(self, content, filepath, commit):
         '''
         在gitlab上更新指定路径的文件，返回服务器返回的信息
         '''
@@ -77,7 +82,12 @@ class GitRepo:
             'filepath': filepath
         }
         conn = httplib.HTTPConnection(self.hostname, self.port, timeout=10)
-        conn.request("PUT", url, urllib.urlencode(content))
+        conn.request("PUT", url, urllib.urlencode({
+            'file_path': filepath,
+            'content': content,
+            'branch_name': self.ref,
+            'commit_message': commit
+        }))
         response = conn.getresponse()
         result = json.loads(response.read())
         if response.status == 200 or response.status == 201:
