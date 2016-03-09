@@ -14,6 +14,6 @@ class Util:
         fmt = logging.Formatter(config['logFmt'])
         fh.setFormatter(fmt)
         logger = logging.getLogger(config['logName'])
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(config['logLevel'])
         logger.addHandler(fh)
         return logger

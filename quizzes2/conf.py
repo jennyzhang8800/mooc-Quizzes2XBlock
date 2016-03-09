@@ -6,9 +6,12 @@ import logging
 
 class Config:
     # log config
-    logFile = '/tmp/quizzes2_block.log'
-    logFmt = '%(asctime)s - %(filename)s:%(lineno)s - %(name)s - %(message)s'
-    logLevel = logging.DEBUG
+    loggerConfig = {
+        'logFile':'/tmp/quizzes2_block.log',
+        'logFmt':'%(asctime)s - %(filename)s:%(lineno)s - %(name)s - %(message)s',
+        'logLevel': logging.DEBUG,
+        'logName': 'Quizzes2XBlockLogger',
+    }
 
     # 题库github配置
     getQuestionJsonUrl = 'https://api.github.com/repos/chyyuu/os_course_exercise_library/contents/data/json/%(qDir)d/%(qNo)d.json'
@@ -17,8 +20,8 @@ class Config:
     maxSizeOfAnswerList = 5
 
     # teacher/answer gitlab 配置
-    techerGitlab = {
-        'root_token': 'xxxxxxxxxxxxxxxxxxxx',
+    teacherGitlab = {
+        'root_token': 'xxxxxxxxxxxxxxxxxx',
         'hostname': '172.16.13.236',
         'port': 80,
         'repo_id': 287,

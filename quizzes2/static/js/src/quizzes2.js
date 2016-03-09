@@ -70,11 +70,14 @@ function Quizzes2XBlock(runtime, element) {
     }
 
     function onDataLoad() {
-        console.info(curStatus);
-        var source = $('#quizzes2-template', element).html();
-        var template = Handlebars.compile(source);
-        var html = template(curStatus);
-        $('div.quizzes2_block', element).html(html);
+        try {
+            var source = $('#quizzes2-template', element).html();
+            var template = Handlebars.compile(source);
+            var html = template(curStatus);
+            $('div.quizzes2_block', element).html(html);
+        } catch (e) {
+            console.info(e);
+        }
     }
 }
 
@@ -95,7 +98,8 @@ Handlebars.registerHelper('CheckLabel', function(typeStr, qNo, opt) {
 });
 
 Handlebars.registerHelper('Lastest', function(answer) {
-    return answer[answer.length - 1]['answer'];
+    var text = answer[answer.length - 1]['answer'];
+    return new Handlebars.SafeString(text.replace(/\n/gm, '<br>'));
 });
 
 Handlebars.registerHelper('SubmitAction', function(tried, maxTry, answerd, graded) {
@@ -144,4 +148,8 @@ Handlebars.registerHelper('TypeText', function(type) {
         'fill_in_the_blank': '填空题'
     };
     return TYPE_STR[type];
+});
+
+Handlebars.registerHelper('MultiLine', function(text) {
+    return new Handlebars.SafeString(text.replace(/\n/gm, '<br>'));
 });

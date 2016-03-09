@@ -6,6 +6,7 @@ from xblock.core import XBlock
 from xblock.fields import Scope, Integer, Dict, List, Boolean
 from xblock.fragment import Fragment
 from conf import Config
+from util import Util
 from GitRepo import GitRepo
 import json
 import hashlib
@@ -24,8 +25,8 @@ class Quizzes2XBlock(XBlock):
     这是学生回答习题的，需要保存每个学生的回答状态
     """
 
-    logging.basicConfig(filename=Config.logFile, level=Config.logLevel, format=Config.logFmt)
-    gitlabRepo = GitRepo(Config)
+    logger = Util.logger(Config.loggerConfig)
+    gitlabRepo = GitRepo(dict(Config.teacherGitlab, **{'logger': logger}))
 
     # 学生能够回答该问题的最大尝试次数,0表示无限制
     maxTry = Integer(default=0, scope=Scope.content)
@@ -56,6 +57,18 @@ class Quizzes2XBlock(XBlock):
         frag.initialize_js('Quizzes2XBlock')
         return frag
 
+    def author_view(self, context=None):
+        '''
+        Studio上的展示页面
+        '''
+        content = {
+            'question': self.qNo,
+            'maxTry': self.maxTry
+        }
+        frag = Fragment(unicode(json.dumps(content)))
+        return frag
+
+
     def studio_view(self, context=None):
         html = self.resource_string("static/html/quizzes2_config.html")
         frag = Fragment(unicode(html).format(qNo=self.qNo, maxTry=self.maxTry))
@@ -64,7 +77,7 @@ class Quizzes2XBlock(XBlock):
         frag.initialize_js('Quizzes2XBlock')
         return frag
 
-    def genCurrentStatus(self):
+    def genCurrentStatus(self, needGradeInfo):
         if not hasattr(self.runtime, "anonymous_student_id"):
             raise Exception('Cannot get anonymous_student_id in runtime')
 
@@ -77,25 +90,29 @@ class Quizzes2XBlock(XBlock):
             studentUsername = 'username unknown'
             tried = 0
             maxTry = 3
-            graded = False
-            gradeInfo = None
+            if needGradeInfo:
+                graded = False
+                gradeInfo = None
         else:
             student = self.runtime.get_real_user(self.runtime.anonymous_student_id)
             studentEmail = student.email
             studentUsername = student.username
             tried = self.tried
             maxTry = self.maxTry
-            graded, gradeInfo = self.fetchGradeInfo(student, self.qNo)
+            if needGradeInfo:
+                graded, gradeInfo = self.fetchGradeInfo(student, self.qNo)
 
-        return {
+        content = {
             'maxTry': maxTry,
             'tried': tried,
-            'graded': graded,
-            'gradeInfo': gradeInfo,
             'student': {'email': studentEmail, 'username': studentUsername},
             'answer': self.answerList,
             'question': self.questionJson
         }
+        if needGradeInfo:
+            return dict(content, **{'graded': graded, 'gradeInfo': gradeInfo})
+        else:
+            return content
 
     def fetchGradeInfo(self, student, qNo):
         '''
@@ -116,10 +133,10 @@ class Quizzes2XBlock(XBlock):
     @XBlock.json_handler
     def getCurrentStatus(self, data, suffix=''):
         try:
-            status = self.genCurrentStatus()
+            status = self.genCurrentStatus(True)
             return {'code': 0, 'desc': 'ok', 'result': status}
         except Exception as e:
-            logging.exception('ERROR getCurrentStatus %s' % (str(e)))
+            self.logger.exception('ERROR getCurrentStatus %s' % (str(e)))
             return {'code': 1, 'dese': str(e)}
 
     @XBlock.json_handler
@@ -130,13 +147,16 @@ class Quizzes2XBlock(XBlock):
             t = datetime.datetime.now() + datetime.timedelta(hours=12)
             createtime = t.strftime('%Y-%m-%d:%H:%M:%S')
             answerItem = {'time': createtime, 'answer': data['answer']}
+            self.logger.debug('answerItem %s' % str(answerItem))
             self.answerList.append(answerItem)
+            self.logger.debug('answerList %s' % str(self.answerList))
+            self.tried += 1
             # 删除多余的历史数据
             if len(self.answerList) > Config.maxSizeOfAnswerList:
                 self.answerList = self.answerList[-(Config.maxSizeOfAnswerList):]
 
-            content = self.genCurrentStatus()
-            # TODO push to gitlab
+            content = self.genCurrentStatus(False)
+            # push to gitlab
             filepath = '%(emailHash)s/%(username)s/%(qNo)d/%(qNo)d.json' % {
                 'emailHash': hashlib.new('md5', student.email).hexdigest()[-2:],
                 'username': student.username,
@@ -144,22 +164,20 @@ class Quizzes2XBlock(XBlock):
             }
             oldContent = self.gitlabRepo.readContent(filepath)
             if oldContent is None:
-                self.gitlabRepo.createContent(content, filepath)
+                self.gitlabRepo.createContent(json.dumps(content, ensure_ascii=False, indent=4), filepath, 'create %s' % filepath)
             else:
-                self.gitlabRepo.updateContent(content, filepath)
+                self.gitlabRepo.updateContent(json.dumps(content, ensure_ascii=False, indent=4), filepath, 'update %s' % filepath)
 
-            # 只有在前面的工作都完成以后,才能增加记录的次数
-            self.tried += 1
-            logging.info('studentSubmit [student=%] [tried=%d] [maxTry=%d] [answer=%s] [qNo=%d]' % (
+            self.logger.info('studentSubmit [student=%s] [tried=%d] [maxTry=%d] [answer=%s] [qNo=%d]' % (
                 (student.email, student.username),
                 self.tried,
                 self.maxTry,
                 json.dumps(answerItem),
                 self.qNo
             ))
-            return {'code': 0, 'desc': 'ok', 'result': self.genCurrentStatus()}
+            return {'code': 0, 'desc': 'ok', 'result': self.genCurrentStatus(False)}
         except Exception as e:
-            logging.exception('ERROR student_submit %s' % str(e))
+            self.logger.exception('ERROR student_submit %s' % str(e))
             return {'code': 1, 'dese': str(e.args)}
 
     @XBlock.json_handler
@@ -170,7 +188,7 @@ class Quizzes2XBlock(XBlock):
         data.max_try    最大尝试的次数
         '''
         try:
-            logging.info('studioSubmit data=%s' % str(data))
+            self.logger.info('studioSubmit data=%s' % str(data))
             # 保存max_try
             self.maxTry = int(data['maxTry'])
 
@@ -187,17 +205,13 @@ class Quizzes2XBlock(XBlock):
             if 'content' in res:
                 content = base64.b64decode(res['content'])
                 self.questionJson = json.loads(content)
-                # 抹去题目中的答案和解释信息
-                self.questionJson['answer'] = u'已隐藏'
-                self.questionJson['explain'] = u'已隐藏'
-
-                logging.info('get question from remote [qNo=%s]' % (q_number))
+                self.logger.info('get question from remote [qNo=%s]' % (q_number))
                 return {'code': 0, 'desc': 'ok'}
             else:
-                logging.warning('ERROR studioSubmit: Cannot read question json [qNo=%d] [msg=%s]' % (q_number, res['message']))
+                self.logger.warning('ERROR studioSubmit: Cannot read question json [qNo=%d] [msg=%s]' % (q_number, res['message']))
                 return {'code': 2, 'desc': res['message']}
         except Exception as e:
-            logging.exception('ERROR studioSubmit %s' % str(e.args))
+            self.logger.exception('ERROR studioSubmit %s' % str(e.args))
             return {'code': 1, 'dese': str(e.args)}
 
     # workbench while developing your XBlock.

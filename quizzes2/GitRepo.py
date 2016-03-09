@@ -17,6 +17,11 @@ class GitRepo:
         self.fileOperUrl = config['file_operation_url']
         self.ref = config['ref']
         self.headers = {"Content-type": "application/x-www-form-urlencoded", "Accept": "application/json"}
+        if config['logger'] is not None:
+            self.logger = config['logger']
+        else:
+            self.logger = logging.getLogger('')
+
 
     def readContent(self, filepath):
         '''
@@ -35,12 +40,16 @@ class GitRepo:
             response = conn.getresponse()
 
             if response.status == 200:
-                content = json.loads(base64.b64decode(json.loads(response.read())["content"]))
+                response_data = response.read()
+                response_data = json.loads(response_data)
+                content = json.loads(base64.b64decode(response_data["content"]))
+            elif response.status == 404:
+                pass
             else:
                 msg = json.loads(response.read())['message']
-                logging.info('readContent: wrong status returned [status=%d] [msg=%s] [filepath=%s]' % (response.status, msg, filepath))
+                self.logger.info('readContent: wrong status returned [msg=%s] [filepath=%s]' % (msg, filepath))
         except httplib.HTTPException as e:
-            logging.warning('Exception when get file from remote repo [%s]' % str(e))
+            self.logger.warning('Exception when get file from remote repo [%s]' % str(e))
         finally:
             conn.close()
         return content
@@ -61,13 +70,13 @@ class GitRepo:
             'content': content,
             'branch_name': self.ref,
             'commit_message': commit
-        }))
+        }), self.headers)
         response = conn.getresponse()
         result = json.loads(response.read())
         if response.status == 200 or response.status == 201:
-            logging.info('createContent: file created successfully [filepath=%s]' % (filepath))
+            self.logger.info('createContent: file created successfully [filepath=%s]' % (filepath))
         else:
-            logging.warning('createContent: wrong status returned [status=%d] [msg=%s] [filepath=%s]' % (response.status, result['message'], filepath))
+            self.logger.warning('createContent: wrong status returned [status=%d] [msg=%s] [filepath=%s]' % (response.status, result['message'], filepath))
             raise Exception('wrong status [status=%d]' % response.status)
         return result
 
@@ -87,12 +96,12 @@ class GitRepo:
             'content': content,
             'branch_name': self.ref,
             'commit_message': commit
-        }))
+        }), self.headers)
         response = conn.getresponse()
         result = json.loads(response.read())
         if response.status == 200 or response.status == 201:
-            logging.info('updateContent: file updated successfully [filepath=%s]' % (filepath))
+            self.logger.info('updateContent: file updated successfully [filepath=%s]' % (filepath))
         else:
-            logging.warning('updateContent: wrong status returned [status=%d] [msg=%s] [filepath=%s]' % (response.status, result['message'], filepath))
+            self.logger.warning('updateContent: wrong status returned [status=%d] [msg=%s] [filepath=%s]' % (response.status, result['message'], filepath))
             raise Exception('wrong status [status=%d]' % response.status)
         return result
