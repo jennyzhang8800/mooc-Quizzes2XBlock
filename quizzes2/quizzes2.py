@@ -37,7 +37,7 @@ class Quizzes2XBlock(XBlock):
     # 学生当前已经尝试的次数
     tried = Integer(default=0, scope=Scope.user_state)
     # 学生每次回答的记录
-    answerList = List(default=[], scope=Scope.user_state)
+    answerList = List(default=None, scope=Scope.user_state)
 
     def resource_string(self, path):
         """Handy helper for getting resources from our kit."""
@@ -81,26 +81,15 @@ class Quizzes2XBlock(XBlock):
         if not hasattr(self.runtime, "anonymous_student_id"):
             raise Exception('Cannot get anonymous_student_id in runtime')
 
-        # 检查是否是生产环境
-        if self.runtime.get_real_user is None:
-            if type(self.questionJson) is str:
-                self.questionJson = json.loads(self.questionJson)
-            # 测试环境下，以下变量暂时无法获得
-            studentEmail = 'email unknown'
-            studentUsername = 'username unknown'
-            tried = 0
-            maxTry = 3
-            if needGradeInfo:
-                graded = False
-                gradeInfo = None
-        else:
-            student = self.runtime.get_real_user(self.runtime.anonymous_student_id)
-            studentEmail = student.email
-            studentUsername = student.username
-            tried = self.tried
-            maxTry = self.maxTry
-            if needGradeInfo:
-                graded, gradeInfo = self.fetchGradeInfo(student, self.qNo)
+        student = self.runtime.get_real_user(self.runtime.anonymous_student_id)
+        if needGradeInfo:
+            graded, gradeInfo = self.fetchGradeInfo(student, self.qNo)
+        if self.answerList is None:
+            self.tried, self.answerList = self.fetchAnswerInfo(student, self.qNo)
+        studentEmail = student.email
+        studentUsername = student.username
+        tried = self.tried
+        maxTry = self.maxTry
 
         content = {
             'maxTry': maxTry,
@@ -129,6 +118,23 @@ class Quizzes2XBlock(XBlock):
         else:
             graded = True
         return (graded, gradeInfo)
+
+    def fetchAnswerInfo(self, student, qNo):
+        '''
+        从gitlab获取学生的回答信息,并保存
+        '''
+        filepath = '%(emailHash)s/%(username)s/%(qNo)d/%(qNo)d.json' % {
+            'emailHash': hashlib.new('md5', student.email).hexdigest()[-2:],
+            'username': student.username,
+            'qNo': qNo
+        }
+        answerInfo = self.gitlabRepo.readContent(filepath)
+        if answerInfo is None:
+            return (0, [])
+        else:
+            self.logger.info('fetch answer info from gitlab')
+            return (answerInfo['tried'], answerInfo['answer'])
+
 
     @XBlock.json_handler
     def getCurrentStatus(self, data, suffix=''):

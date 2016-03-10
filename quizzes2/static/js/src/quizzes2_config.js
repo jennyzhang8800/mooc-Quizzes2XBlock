@@ -1,5 +1,6 @@
 function Quizzes2XBlock(runtime, element) {
     $(element).find('.save-button').bind('click', function() {
+        console.info('save-button is click');
         var handlerUrl = runtime.handlerUrl(element, 'studioSubmit');
         var data = {
             qNo: $(element).find('input[name=qNo]').val(),
@@ -12,6 +13,7 @@ function Quizzes2XBlock(runtime, element) {
     });
 
     $(element).find('.cancel-button').bind('click', function() {
+        console.info('cancel-button is click');
         runtime.notify('cancel', {});
     });
 }
