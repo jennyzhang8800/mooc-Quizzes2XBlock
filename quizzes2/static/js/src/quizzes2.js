@@ -35,6 +35,9 @@ function Quizzes2XBlock(runtime, element) {
                 switchStyle($(event.target), 'submited');
                 if (data.code != 0) {
                     alert('您的提交可能失败了' + JSON.stringify(data));
+                } else {
+                    curStatus = data.result;
+                    onDataLoad();
                 }
             }
         });
@@ -135,7 +138,7 @@ Handlebars.registerHelper('GradeInfo', function(graded, gradeInfo) {
     if (!graded) {
         return '该题尚未批改';
     } else {
-        return '参考答案:' + gradeInfo.rightAnswer + ', 得分:' + gradeInfo.score;
+        return '参考答案:' + gradeInfo.standard_answer + ', 得分:' + gradeInfo.score;
     }
 });
 

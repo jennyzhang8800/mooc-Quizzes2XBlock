@@ -3,7 +3,7 @@
 import pkg_resources
 
 from xblock.core import XBlock
-from xblock.fields import Scope, Integer, Dict, List, Boolean
+from xblock.fields import Scope, Integer, Dict, List, Boolean, String
 from xblock.fragment import Fragment
 from conf import Config
 from util import Util
@@ -28,6 +28,10 @@ class Quizzes2XBlock(XBlock):
     logger = Util.logger(Config.loggerConfig)
     gitlabRepo = GitRepo(dict(Config.teacherGitlab, **{'logger': logger}))
 
+    # 这是xblock 的特殊fields 用于指定xblock的名字
+    display_name = String(display_name='Display Name', default=u'练习', scope=Scope.settings,
+        help='Name of the component in the edxplatform')
+
     # 学生能够回答该问题的最大尝试次数,0表示无限制
     maxTry = Integer(default=0, scope=Scope.content)
     # 当前block保存的题目
@@ -45,10 +49,11 @@ class Quizzes2XBlock(XBlock):
         return data.decode("utf8")
 
     def student_view(self, context=None):
-        """
-        The primary view of the Quizzes2XBlock, shown to students
-        when viewing courses.
-        """
+        '''
+        学生页面
+        '''
+        if self.inStudio():
+            return self.author_view(context)
         html = self.resource_string("static/html/quizzes2.html")
         frag = Fragment(html)
         frag.add_css(self.resource_string("static/css/quizzes2.css"))
@@ -59,7 +64,7 @@ class Quizzes2XBlock(XBlock):
 
     def author_view(self, context=None):
         '''
-        Studio上的展示页面
+        Studio上的缩略页面
         '''
         content = {
             'question': self.qNo,
@@ -70,12 +75,21 @@ class Quizzes2XBlock(XBlock):
 
 
     def studio_view(self, context=None):
+        '''
+        Studio 上的配置页面
+        '''
         html = self.resource_string("static/html/quizzes2_config.html")
         frag = Fragment(unicode(html).format(qNo=self.qNo, maxTry=self.maxTry))
         frag.add_javascript(self.resource_string("static/js/handlebars-v4.0.5.js"))
         frag.add_javascript(self.resource_string('static/js/src/quizzes2_config.js'))
         frag.initialize_js('Quizzes2XBlock')
         return frag
+
+    def inStudio(self):
+        '''
+        检查当前是不是studio环境
+        '''
+        return self.runtime.get_real_user is None
 
     def genCurrentStatus(self, needGradeInfo):
         if not hasattr(self.runtime, "anonymous_student_id"):
@@ -84,6 +98,7 @@ class Quizzes2XBlock(XBlock):
         student = self.runtime.get_real_user(self.runtime.anonymous_student_id)
         if needGradeInfo:
             graded, gradeInfo = self.fetchGradeInfo(student, self.qNo)
+            self.tried, self.answerList = self.fetchAnswerInfo(student, self.qNo)
         if self.answerList is None:
             self.tried, self.answerList = self.fetchAnswerInfo(student, self.qNo)
         studentEmail = student.email

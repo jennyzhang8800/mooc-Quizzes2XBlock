@@ -33,7 +33,7 @@ class GitRepo:
             'ref': self.ref,
             'filepath': filepath
         }
-        conn = httplib.HTTPConnection(self.hostname, self.port, timeout=10)
+        conn = httplib.HTTPConnection(self.hostname, self.port, timeout=30)
         content = None
         try:
             conn.request("GET", url, None, self.headers)
@@ -64,7 +64,7 @@ class GitRepo:
             'ref': self.ref,
             'filepath': filepath
         }
-        conn = httplib.HTTPConnection(self.hostname, self.port, timeout=10)
+        conn = httplib.HTTPConnection(self.hostname, self.port, timeout=60)
         conn.request("POST", url, urllib.urlencode({
             'file_path': filepath,
             'content': content,
@@ -90,7 +90,7 @@ class GitRepo:
             'ref': self.ref,
             'filepath': filepath
         }
-        conn = httplib.HTTPConnection(self.hostname, self.port, timeout=10)
+        conn = httplib.HTTPConnection(self.hostname, self.port, timeout=60)
         conn.request("PUT", url, urllib.urlencode({
             'file_path': filepath,
             'content': content,

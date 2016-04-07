@@ -9,7 +9,7 @@ class Config:
     loggerConfig = {
         'logFile':'/tmp/quizzes2_block.log',
         'logFmt':'%(asctime)s - %(filename)s:%(lineno)s - %(name)s - %(message)s',
-        'logLevel': logging.DEBUG,
+        'logLevel': logging.INFO,
         'logName': 'Quizzes2XBlockLogger',
     }
 
@@ -21,10 +21,10 @@ class Config:
 
     # teacher/answer gitlab 配置
     teacherGitlab = {
-        'root_token': 'xxxxxxxxxxxxxxxxxxxxxx',
+        'root_token': 'xxxxxxxxxxxxxxxxxxxx',
         'hostname': '172.16.13.236',
         'port': 80,
         'repo_id': 287,
         'file_operation_url': '/api/v3/projects/%(repo_id)d/repository/files?private_token=%(root_token)s&&file_path=%(filepath)s&&ref=%(ref)s',
-        'ref': 'dev-upgrade2',
+        'ref': 'master',
     }
