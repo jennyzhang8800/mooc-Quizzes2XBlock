@@ -21,8 +21,7 @@ class Config:
 
     # teacher/answer gitlab 配置
     teacherGitlab = {
-        'root_token': '9b7YDTxPuN9-ztwchRJ2',
-#        'root_token': 'L7Zxq6V_WXvG36wyrxt6',
+        'root_token': 'xxxxxxxxxxxxxxxxxxxxxxxx',
         'hostname': '172.16.13.236',
         'port': 80,
         'repo_id': 287,
