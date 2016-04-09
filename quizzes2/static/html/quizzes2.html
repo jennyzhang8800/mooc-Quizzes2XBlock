@@ -3,7 +3,8 @@
 <script id="quizzes2-template" type="text/x-handlebars-template">
 {{#with question}}
     <div class="hr"></div>
-    <p class="questionText">[{{TypeText type}}] {{MultiLine question}}</p>
+    <p class="questionText">[{{TypeText type}}]</p>
+    <div>{{Markdown question}}</div>
     {{#if options}}
         {{#each options}}
         <label class="option">
@@ -26,3 +27,4 @@
 {{/if}}
 </script>
 <script src="//cdn.bootcss.com/handlebars.js/4.0.5/handlebars.min.js"></script>
+<script src="//cdn.bootcss.com/showdown/1.3.0/showdown.min.js"></script>

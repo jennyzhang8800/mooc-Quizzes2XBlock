@@ -21,7 +21,6 @@ function Quizzes2XBlock(runtime, element) {
 
     $(element).on('click', '.btn-submit', function(event) {
         answer = getStudentAnswer();
-        console.info(answer);
         if ($.trim(answer) == '') {
             alert('答案不能为空');
             return;
@@ -173,6 +172,7 @@ Handlebars.registerHelper('TypeText', function(type) {
     return TYPE_STR[type];
 });
 
-Handlebars.registerHelper('MultiLine', function(text) {
-    return new Handlebars.SafeString(text.replace(/\n/gm, '<br>'));
+Handlebars.registerHelper('Markdown', function(text) {
+    var converter = new showdown.Converter();
+    return new Handlebars.SafeString(converter.makeHtml(text));
 });

@@ -251,7 +251,7 @@ class Quizzes2XBlock(XBlock):
              """),
             ("Quizzes2XBlock-test",
                 """
-                <quizzes2 maxTry="5" questionJson='{"status":"error","knowledge":["文件系统"],"degree_of_difficulty":1,"explain":"解释\n","question":"文件的逻辑结构的基本形式有__(A)__，__(B)__和__(C)__。\n","source":"网络","answer":"解释\n","type":"fill_in_the_blank","options":["A.", "B.", "C."],"q_number":396}'/>
+                <quizzes2 maxTry="5" questionJson='{"status":"error","knowledge":["文件系统"],"degree_of_difficulty":1,"explain":"解释\n","question":"文件的逻辑结构的基本形式有**(A)**，__(B)__和__(C)__。\\n```\\n$ pip install\\n```","source":"网络","answer":"解释\n","type":"fill_in_the_blank","options":["A.", "B.", "C."],"q_number":396}'/>
              """),
             ("Multiple Quizzes2XBlock",
              """<vertical_demo>

@@ -6,7 +6,7 @@
 }
 
 div.quizzes2_block .questionText {
-    font-size: 1.2rem;
+    font-size: 0.8rem;
 }
 
 div.quizzes2_block .questionText span {
@@ -45,6 +45,13 @@ div.quizzes2_block .text-opt {
 div.quizzes2_block .option .text-input {
     height: 1.8rem;
     width: 90%;
+}
+
+div.quizzes2_block pre {
+    background-color: #eee;
+    border-radius: 3px;
+    border: 1px solid #e5e5e5;
+    padding: 10px;
 }
 
 div.quizzes2_block .text-input {
