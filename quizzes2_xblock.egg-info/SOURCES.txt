@@ -1,9 +1,15 @@
+quizzes2/GitRepo.py
 quizzes2/__init__.py
+quizzes2/conf.py
 quizzes2/quizzes2.py
+quizzes2/util.py
 quizzes2/static/README.txt
 quizzes2/static/css/quizzes2.css
 quizzes2/static/html/quizzes2.html
+quizzes2/static/html/quizzes2_config.html
+quizzes2/static/js/handlebars-v4.0.5.js
 quizzes2/static/js/src/quizzes2.js
+quizzes2/static/js/src/quizzes2_config.js
 quizzes2_xblock.egg-info/PKG-INFO
 quizzes2_xblock.egg-info/SOURCES.txt
 quizzes2_xblock.egg-info/dependency_links.txt

@@ -29,8 +29,7 @@ class Quizzes2XBlock(XBlock):
     gitlabRepo = GitRepo(dict(Config.teacherGitlab, **{'logger': logger}))
 
     # 这是xblock 的特殊fields 用于指定xblock的名字
-    display_name = String(display_name='Display Name', default=u'练习', scope=Scope.settings,
-        help='Name of the component in the edxplatform')
+    display_name = String(display_name='Display Name', default=u'练习', scope=Scope.settings, help='Name of the component in the edxplatform')
 
     # 学生能够回答该问题的最大尝试次数,0表示无限制
     maxTry = Integer(default=0, scope=Scope.content)
@@ -57,7 +56,7 @@ class Quizzes2XBlock(XBlock):
         html = self.resource_string("static/html/quizzes2.html")
         frag = Fragment(html)
         frag.add_css(self.resource_string("static/css/quizzes2.css"))
-        frag.add_javascript(self.resource_string("static/js/handlebars-v4.0.5.js"))
+        #frag.add_javascript(self.resource_string("static/js/handlebars-v4.0.5.js"))
         frag.add_javascript(self.resource_string("static/js/src/quizzes2.js"))
         frag.initialize_js('Quizzes2XBlock')
         return frag
@@ -72,7 +71,6 @@ class Quizzes2XBlock(XBlock):
         }
         frag = Fragment(unicode(json.dumps(content)))
         return frag
-
 
     def studio_view(self, context=None):
         '''
@@ -89,18 +87,27 @@ class Quizzes2XBlock(XBlock):
         '''
         检查当前是不是studio环境
         '''
-        return self.runtime.get_real_user is None
+        if hasattr(self.runtime, 'get_real_user'):
+            return self.runtime.get_real_user is None
+        else:
+            # 在测试环境
+            return False
 
     def genCurrentStatus(self, needGradeInfo):
         if not hasattr(self.runtime, "anonymous_student_id"):
-            raise Exception('Cannot get anonymous_student_id in runtime')
+            # 测试环境
+            student = Test()
+            student.email = 'unkown@unkown.com'
+            student.username = 'unkown'
+            graded, gradeInfo = (False, None)
+        else:
+            student = self.runtime.get_real_user(self.runtime.anonymous_student_id)
+            if needGradeInfo:
+                graded, gradeInfo = self.fetchGradeInfo(student, self.qNo)
+                self.tried, self.answerList = self.fetchAnswerInfo(student, self.qNo)
+            if self.answerList is None:
+                self.tried, self.answerList = self.fetchAnswerInfo(student, self.qNo)
 
-        student = self.runtime.get_real_user(self.runtime.anonymous_student_id)
-        if needGradeInfo:
-            graded, gradeInfo = self.fetchGradeInfo(student, self.qNo)
-            self.tried, self.answerList = self.fetchAnswerInfo(student, self.qNo)
-        if self.answerList is None:
-            self.tried, self.answerList = self.fetchAnswerInfo(student, self.qNo)
         studentEmail = student.email
         studentUsername = student.username
         tried = self.tried
@@ -149,7 +156,6 @@ class Quizzes2XBlock(XBlock):
         else:
             self.logger.info('fetch answer info from gitlab')
             return (answerInfo['tried'], answerInfo['answer'])
-
 
     @XBlock.json_handler
     def getCurrentStatus(self, data, suffix=''):
@@ -245,12 +251,11 @@ class Quizzes2XBlock(XBlock):
              """),
             ("Quizzes2XBlock-test",
                 """
-                <quizzes2 maxTry="2" questionJson='{"status":"ok","knowledge":["操作系统概述"],"degree_of_difficulty":1,"explain":"B\n","question":"批处理系统的主要缺点是 。\n","source":"网络","answer":"B","type":"single_answer","options":["A.CPU的利用率不高","B.失去了交互性","C.不具备并行性","D.以上都不是"],"q_number":1002}'/>
+                <quizzes2 maxTry="5" questionJson='{"status":"error","knowledge":["文件系统"],"degree_of_difficulty":1,"explain":"解释\n","question":"文件的逻辑结构的基本形式有__(A)__，__(B)__和__(C)__。\n","source":"网络","answer":"解释\n","type":"fill_in_the_blank","options":["A.", "B.", "C."],"q_number":396}'/>
              """),
             ("Multiple Quizzes2XBlock",
              """<vertical_demo>
                 <quizzes2 maxTry="2" questionJson='{"status":"ok","knowledge":["操作系统概述"],"degree_of_difficulty":1,"explain":"B\n","question":"批处理系统的主要缺点是 。\n","source":"网络","answer":"B","type":"single_answer","options":["A.CPU的利用率不高","B.失去了交互性","C.不具备并行性","D.以上都不是"],"q_number":1002}'/>
-                <quizzes2 maxTry="5" questionJson='{"status":"error","knowledge":["文件系统"],"degree_of_difficulty":1,"explain":"解释\n","question":"文件的逻辑结构的基本形式有______________________________________ 。\n","source":"网络","answer":"解释\n","type":"fill_in_the_blank","q_number":396}'/>
                 <quizzes2 maxTry="0" questionJson='{"status":"ok","knowledge":["调查问卷"],"degree_of_difficulty":1,"explain":"解释\n","question":"为什么要学这门课？\n","source":"网络","answer":"A","type":"multi_answer","options":["A.对内容有兴趣","B.内容与自己的目标相一致，结果有用","C.由于学分要求，必须选","D.其他，请注明原因"],"q_number":1137}' answerList='[{"time":"2012-01-01 13:20","answer":"A"}]'/>
                 </vertical_demo>
              """),

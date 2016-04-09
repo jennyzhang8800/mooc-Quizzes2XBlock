@@ -21,6 +21,7 @@ function Quizzes2XBlock(runtime, element) {
 
     $(element).on('click', '.btn-submit', function(event) {
         answer = getStudentAnswer();
+        console.info(answer);
         if ($.trim(answer) == '') {
             alert('答案不能为空');
             return;
@@ -46,6 +47,12 @@ function Quizzes2XBlock(runtime, element) {
     function getStudentAnswer() {
         if (curStatus.question.options == undefined) {
             return $('.text-input', element).val();
+        } else if (curStatus.question.type == 'fill_in_the_blank') {
+            var answer = '';
+            $('.option .text-input', element).each(function() {
+                answer += $(this).attr('name') + ':' + $(this).val() + '\n';
+            });
+            return answer;
         } else {
             var answer = '';
             $('.check-input:checked', element).each(function() {
@@ -76,6 +83,7 @@ function Quizzes2XBlock(runtime, element) {
         try {
             var source = $('#quizzes2-template', element).html();
             var template = Handlebars.compile(source);
+            console.info(curStatus);
             var html = template(curStatus);
             $('div.quizzes2_block', element).html(html);
         } catch (e) {
@@ -88,16 +96,28 @@ Handlebars.registerHelper('CheckLabel', function(typeStr, qNo, opt) {
     var TYPE_DEF = {
         'single_answer': 'radio',
         'true_false': 'radio',
-        'multi_answer': 'checkbox'
+        'multi_answer': 'checkbox',
+        'fill_in_the_blank': 'text',
     };
-    return new Handlebars.SafeString(
-        '<input type="{type}" name="option-{qNo}" class="check-input" value="{value}"/>{option}'.replaceInFormat({
-            type: TYPE_DEF[typeStr],
-            qNo: qNo,
-            value: opt.split('.')[0],
-            option: opt
-        })
-    );
+    var inputType = TYPE_DEF[typeStr];
+    if (inputType == 'radio' || inputType == 'checkbox') {
+        return new Handlebars.SafeString(
+            '<input type="{type}" name="option-{qNo}" class="check-input" value="{value}"/>{option}'.replaceInFormat({
+                type: TYPE_DEF[typeStr],
+                qNo: qNo,
+                value: opt.split('.')[0],
+                option: opt
+            })
+        );
+    } else if (inputType == 'text') {
+        return new Handlebars.SafeString(
+            '<span class="text-opt">{label}:</span><input type="{type}" name="{label}" class="text-input"/>'.replaceInFormat({
+                type: TYPE_DEF[typeStr],
+                label: opt.split('.')[0],
+            })
+        );
+    }
+    return '';
 });
 
 Handlebars.registerHelper('Lastest', function(answer) {
