@@ -17,6 +17,9 @@
 {{/with}}
 {{#if answer}}
     <p class="answer">你的答案: {{Lastest answer}} <span class="grade-info">{{GradeInfo graded gradeInfo}}</span><p>
+    {{#if comment}}
+        <p class="answer">评语: {{comment}}</p>
+    {{/if}}
     <div class="action">
         {{SubmitAction tried maxTry true graded}}
     </div>
@@ -26,5 +29,3 @@
     </div>
 {{/if}}
 </script>
-<script src="//cdn.bootcss.com/handlebars.js/4.0.5/handlebars.min.js"></script>
-<script src="//cdn.bootcss.com/showdown/1.3.0/showdown.min.js"></script>

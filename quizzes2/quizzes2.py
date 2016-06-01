@@ -56,7 +56,8 @@ class Quizzes2XBlock(XBlock):
         html = self.resource_string("static/html/quizzes2.html")
         frag = Fragment(html)
         frag.add_css(self.resource_string("static/css/quizzes2.css"))
-        #frag.add_javascript(self.resource_string("static/js/handlebars-v4.0.5.js"))
+        frag.add_javascript_url('//cdn.bootcss.com/handlebars.js/4.0.5/handlebars.min.js')
+        frag.add_javascript_url('//cdn.bootcss.com/showdown/1.3.0/showdown.min.js')
         frag.add_javascript(self.resource_string("static/js/src/quizzes2.js"))
         frag.initialize_js('Quizzes2XBlock')
         return frag
@@ -226,6 +227,7 @@ class Quizzes2XBlock(XBlock):
                 'qDir': ((q_number - 1) / 100) + 1,
                 'qNo': q_number,
             }
+            self.logger.info('studioSubmint url=%s' % url)
             res_data = urllib2.urlopen(url)
             res = res_data.read()
             res = json.loads(res)

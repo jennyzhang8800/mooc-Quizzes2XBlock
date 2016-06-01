@@ -82,7 +82,6 @@ function Quizzes2XBlock(runtime, element) {
         try {
             var source = $('#quizzes2-template', element).html();
             var template = Handlebars.compile(source);
-            console.info(curStatus);
             var html = template(curStatus);
             $('div.quizzes2_block', element).html(html);
         } catch (e) {
