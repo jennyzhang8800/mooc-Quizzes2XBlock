@@ -1,4 +1,5 @@
 <div class="quizzes2_block">
+    正在载入中...
 </div>
 <script id="quizzes2-template" type="text/x-handlebars-template">
 {{#with question}}
@@ -21,11 +22,11 @@
         <p class="answer">评语: {{comment}}</p>
     {{/if}}
     <div class="action">
-        {{SubmitAction tried maxTry true graded}}
+        {{SubmitAction student tried maxTry true graded}}
     </div>
 {{else}}
     <div class="action">
-        {{SubmitAction tried maxTry false false}}
+        {{SubmitAction student tried maxTry false false}}
     </div>
 {{/if}}
 </script>

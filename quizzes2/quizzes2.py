@@ -32,11 +32,16 @@ class Quizzes2XBlock(XBlock):
     display_name = String(display_name='Display Name', default=u'练习', scope=Scope.settings, help='Name of the component in the edxplatform')
 
     # 学生能够回答该问题的最大尝试次数,0表示无限制
+    # 注意：下面的字段定义的Scope为user_state_summary，这样的设置让openedx允许从LMS修改这些字段
+    #       处于安全性的考虑，我个人不建议这样的修改，但是老师一定需要这样的功能。
     maxTry = Integer(default=0, scope=Scope.content)
+    #maxTry = Integer(default=0, scope=Scope.user_state_summary)
     # 当前block保存的题目
     questionJson = Dict(default={}, scope=Scope.content)
+    #questionJson = Dict(default={}, scope=Scope.user_state_summary)
     # 当前block保存的题题号
     qNo = Integer(default=0, scope=Scope.content)
+    #qNo = Integer(default=0, scope=Scope.user_state_summary)
     # 学生当前已经尝试的次数
     tried = Integer(default=0, scope=Scope.user_state)
     # 学生每次回答的记录
@@ -79,7 +84,6 @@ class Quizzes2XBlock(XBlock):
         '''
         html = self.resource_string("static/html/quizzes2_config.html")
         frag = Fragment(unicode(html).format(qNo=self.qNo, maxTry=self.maxTry))
-        frag.add_javascript(self.resource_string("static/js/handlebars-v4.0.5.js"))
         frag.add_javascript(self.resource_string('static/js/src/quizzes2_config.js'))
         frag.initialize_js('Quizzes2XBlock')
         return frag
@@ -100,6 +104,7 @@ class Quizzes2XBlock(XBlock):
             student = Test()
             student.email = 'unkown@unkown.com'
             student.username = 'unkown'
+            student.is_staff = True
             graded, gradeInfo = (False, None)
         else:
             student = self.runtime.get_real_user(self.runtime.anonymous_student_id)
@@ -111,13 +116,14 @@ class Quizzes2XBlock(XBlock):
 
         studentEmail = student.email
         studentUsername = student.username
+        studentIsStaff = student.is_staff
         tried = self.tried
         maxTry = self.maxTry
 
         content = {
             'maxTry': maxTry,
             'tried': tried,
-            'student': {'email': studentEmail, 'username': studentUsername},
+            'student': {'email': studentEmail, 'username': studentUsername, 'is_staff': studentIsStaff},
             'answer': self.answerList,
             'question': self.questionJson
         }
@@ -240,7 +246,7 @@ class Quizzes2XBlock(XBlock):
                 self.logger.warning('ERROR studioSubmit: Cannot read question json [qNo=%d] [msg=%s]' % (q_number, res['message']))
                 return {'code': 2, 'desc': res['message']}
         except Exception as e:
-            self.logger.exception('ERROR studioSubmit %s' % str(e.args))
+            self.logger.exception('ERROR')
             return {'code': 1, 'dese': str(e.args)}
 
     # workbench while developing your XBlock.

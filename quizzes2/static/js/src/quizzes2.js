@@ -43,6 +43,28 @@ function Quizzes2XBlock(runtime, element) {
         });
     });
 
+    $(element).on('click', '.btn-sync', function(event) {
+        var handlerUrl = runtime.handlerUrl(element, 'studioSubmit');
+        var data = {
+            qNo: curStatus.question.q_number,
+            maxTry: curStatus.maxTry,
+        };
+        $(event.target).text('正在同步...');
+        $.post(handlerUrl, JSON.stringify(data)).done(function(response) {
+            $(event.target).text('已同步');
+        });
+    });
+
+
+    $(element).on('click', '.btn-edit', function(event) {
+        var baseUrl = 'http://crl.ptopenlab.com:8811/courses/Tsinghua/CS101/2015_T1/courseware/65a2e6de0e7f4ec8a261df82683a2fc3/fa72699c288f40c7b7342369889c2042/';
+        var url = '{baseUrl}?qno={qno}'.replaceInFormat({
+            baseUrl: baseUrl,
+            qno: curStatus.question.q_number,
+        });
+        window.open(url);
+    });
+
     function getStudentAnswer() {
         if (curStatus.question.options == undefined) {
             return $('.text-input', element).val();
@@ -123,7 +145,7 @@ Handlebars.registerHelper('Lastest', function(answer) {
     return new Handlebars.SafeString(text.replace(/\n/gm, '<br>'));
 });
 
-Handlebars.registerHelper('SubmitAction', function(tried, maxTry, answerd, graded) {
+Handlebars.registerHelper('SubmitAction', function(student, tried, maxTry, answerd, graded) {
     var remain = maxTry - tried;
     var tryStr = '';
     if (graded) {
@@ -145,6 +167,11 @@ Handlebars.registerHelper('SubmitAction', function(tried, maxTry, answerd, grade
         }
     } else {
         submitBtn = '<button class="btn btn-submit">提交</button>';
+    }
+
+    if (student.is_staff) {
+        submitBtn += '<button class="btn btn-edit">编辑</button>';
+        submitBtn += '<button class="btn btn-sync" disabled>同步</button>';
     }
 
     return new Handlebars.SafeString(
