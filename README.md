@@ -2,6 +2,12 @@
 操作系统课程在OpenEdx上的XBlock插件，用于学生回答问题
 
 ## 部署方法
+
+clone到本地
+```
+$ git clone https://github.com/Heaven1881/mooc-Quizzes2XBlock.git
+$ sudo chown -R edxapp:edxapp mooc-Quizzes2XBlock/
+```
 安装XBlock:
 ```
 $ sudo -u edxapp /edx/bin/pip.edxapp install yourXBlock/
@@ -9,7 +15,7 @@ $ sudo -u edxapp /edx/bin/pip.edxapp install yourXBlock/
 
 重启Edx服务器：
 ```
-$ sudo /edx/bin/supervisorctl -c /edx/etc/supervisord.conf restart edxapp:
+$ sudo /edx/bin/supervisorctl restart edxapp:
 ```
 
 ## FAQ
