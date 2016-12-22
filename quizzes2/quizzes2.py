@@ -14,7 +14,7 @@ import logging
 import datetime
 import urllib2
 import base64
-
+import sys
 
 class Test(object):
     pass
@@ -175,6 +175,8 @@ class Quizzes2XBlock(XBlock):
 
     @XBlock.json_handler
     def studentSubmit(self, data, suffix=''):
+        reload(sys)
+        sys.setdefaultencoding('utf-8')
         try:
             student = self.runtime.get_real_user(self.runtime.anonymous_student_id)
 
